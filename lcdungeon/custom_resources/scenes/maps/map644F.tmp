@@ -1,0 +1,112 @@
+[gd_scene load_steps=5 format=3 uid="uid://dv12l6euhp0d1"]
+
+[ext_resource type="Script" path="res://custom_resources/map_generator.gd" id="1_7a1ig"]
+
+[sub_resource type="GDScript" id="GDScript_oub38"]
+script/source = "class_name Map
+extends Node2D
+
+const SCROLL_SPEED:= 15
+const MAP_ROOM = preload(\"res://custom_resources/scenes/maps/map_room.tscn\")
+const MAP_LINE = preload(\"res://custom_resources/scenes/maps/map_line.tscn\")
+
+@onready var map_generator: MapGenerator= $MapGenerator
+@onready var lines: Node2D= %Lines
+@onready var rooms: Node2D= %Rooms
+@onready var visuals: Node2D= %VisualsMap
+@onready var camera_2d: Camera2D= $Camera2D
+
+var map_data: Array[Room]
+var rooms_completed: int
+var last_room: Room
+var camera_edge_x: float
+
+func _ready() -> void:
+	generate_new_map()
+
+func generate_new_map() -> void:
+	rooms_completed= 0
+	map_data = map_generator.generate_map()
+	create_map()
+	
+func create_map() -> void:	
+	#spawn rooms
+	for room: Room in map_data:
+		if room.column < MapGenerator.MAP_WIDTH-1:
+			_spawn_room(room)
+	#spawn stairs
+	_spawn_room(map_data[MapGenerator.MAP_WIDTH-1])
+	
+	var map_width_px := MapGenerator.X_DIST * (MapGenerator.MAP_WIDTH-1)
+	visuals.position.x = (get_viewport_rect().size.x - map_width_px) /2
+	visuals.position.y = get_viewport_rect().size.y /2
+	
+func unlock_next_rooms()-> void:
+	for map_room: MapRoom in rooms.get_children():
+		if last_room.next_room.has(map_room.room):
+			map_room.available= true
+	
+func show_map()-> void:
+	show()
+	camera_2d.enabled= true
+	
+func hide_map()-> void:
+	hide()
+	camera_2d.enabled= false
+	
+func _spawn_room(room: Room)-> void:
+	var new_map_room:= MAP_ROOM.instantiate() as MapRoom
+	rooms.add_child(new_map_room)
+	_connect_lines(room)
+	
+	if room.selected and room.column < rooms_completed:
+		new_map_room.show_selected()
+
+func _connect_lines(room: Room)-> void:
+	if room.column < map_generator.MAP_WIDTH -1:
+		var new_map_line:= MAP_LINE.instantiate() as Line2D
+		new_map_line.clear_points()
+		new_map_line.add_point(room.position)
+		print(\"room column %s, position %s, next %s\", room.column, room.position, room.next_room.position)
+		new_map_line.add_point(room.next_room.position)
+		lines.add_child(new_map_line)
+	
+	last_room = room
+	#rooms_completed += 1
+	#Events.map_exited.emit(room)
+"
+
+[sub_resource type="Gradient" id="Gradient_k3f1t"]
+colors = PackedColorArray(0.244061, 0.0691452, 0.167573, 1, 0.136316, 0.189392, 0.213818, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_xhthj"]
+gradient = SubResource("Gradient_k3f1t")
+
+[node name="Map" type="Node2D"]
+script = SubResource("GDScript_oub38")
+
+[node name="VisualsMap" type="Node2D" parent="."]
+
+[node name="Lines" type="Node2D" parent="VisualsMap"]
+unique_name_in_owner = true
+
+[node name="Rooms" type="Node2D" parent="VisualsMap"]
+unique_name_in_owner = true
+
+[node name="Camera2D" type="Camera2D" parent="."]
+offset = Vector2(575, 325)
+
+[node name="MapGenerator" type="Node" parent="."]
+script = ExtResource("1_7a1ig")
+
+[node name="MapBG" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="Background" type="TextureRect" parent="MapBG"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 4
+texture = SubResource("GradientTexture1D_xhthj")

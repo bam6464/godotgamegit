@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3 uid="uid://dd1f8kdjfw28o"]
+
+[ext_resource type="Script" path="res://custom_resources/scenes/mainMenu/win_screen.gd" id="1_nlqg7"]
+
+[node name="WinScreen" type="Node2D"]
+script = ExtResource("1_nlqg7")
+
+[node name="WinText" type="Button" parent="."]
+offset_left = 523.0
+offset_top = 253.0
+offset_right = 613.0
+offset_bottom = 284.0
+text = "You Won!!!"
+
+[connection signal="pressed" from="WinText" to="." method="_on_win_text_pressed"]
